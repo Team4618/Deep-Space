@@ -1,0 +1,10 @@
+/.vscode/
+/.vs/
+/.gradle/
+/.wpilib/
+/build/
+/bin/
+*.sln
+*.suo
+*.ilk
+*.obj
