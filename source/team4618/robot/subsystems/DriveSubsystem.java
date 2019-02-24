@@ -14,7 +14,7 @@ import north.Subsystem;
 import north.reflection.*;
 import north.util.DriveControls;
 import north.util.NorthUtils;
-import team4618.robot.IDs;
+import static team4618.robot.IDs.*;
 import north.curves.*;
 
 import static north.network.NetworkDefinitions.*;
@@ -56,8 +56,8 @@ public class DriveSubsystem extends Subsystem implements IDriveAndNavigation {
       }
    }
 
-   public DriveSide left = new DriveSide(true, IDs.LEFT_TALON, IDs.LEFT_VICTOR_1, IDs.LEFT_VICTOR_2);
-   public DriveSide right = new DriveSide(false, IDs.RIGHT_TALON, IDs.RIGHT_VICTOR_1, IDs.RIGHT_VICTOR_2);
+   public DriveSide left = new DriveSide(true, LEFT_TALON, LEFT_VICTOR_1, LEFT_VICTOR_2);
+   public DriveSide right = new DriveSide(false, RIGHT_TALON, RIGHT_VICTOR_1, RIGHT_VICTOR_2);
    public AHRS navx = new AHRS(SPI.Port.kMXP);
 
    @Override
@@ -75,20 +75,6 @@ public class DriveSubsystem extends Subsystem implements IDriveAndNavigation {
       //---------------------
 
       navx.zeroYaw();
-   }
-
-   // Parameter LeftP, LeftI, LeftD;
-   // Parameter RightP, RightI, RightD; 
-   
-   @Override
-   public void updateParameters() {
-      // left.talon.config_kP(0, LeftP.get(), 0);
-      // left.talon.config_kI(0, LeftI.get(), 0);
-      // left.talon.config_kD(0, LeftD.get(), 0);
-
-      // right.talon.config_kP(0, RightP.get(), 0);
-      // right.talon.config_kI(0, RightI.get(), 0);
-      // right.talon.config_kD(0, RightD.get(), 0);
    }
 
    @Override

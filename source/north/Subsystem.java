@@ -32,9 +32,10 @@ public abstract class Subsystem {
             (param_variable.getType() == north.reflection.ParameterArray.class))
          {
             try {
+               param_variable.setAccessible(true);
                String name = param_variable.getName();
                Constructor constructor = param_variable.getType().getConstructor(String.class); 
-               Object param_obj = constructor.newInstance(this.name() + " " + name);
+               Object param_obj = constructor.newInstance("S" + this.name() + "_P" + name + ".param_array");
                param_variable.set(this, param_obj);
                params.put(name, param_obj);
             } catch(Exception e) { e.printStackTrace(); }

@@ -35,15 +35,13 @@ public class NetworkDefinitions {
    static final byte CommandType_Continuous = 2;
 
    //NOTE: north_network_definitions.h
-   static final byte Ping = 0;
-   static final byte Connect = 1;
-   static final byte Welcome = 2;
-   static final byte CurrentParameters = 3;
-   static final byte State = 4;
-   static final byte SetParameter = 5;
-   static final byte SetState = 6;
-   static final byte CurrentAutoPath = 7;
-   static final byte UploadAutonomous = 8;
+   static final byte SetConnectionFlags = 1; //<-
+   static final byte Welcome = 2; //->
+   static final byte CurrentParameters = 3; //->
+   static final byte State = 4; //->
+   static final byte ParameterOp = 5;  //<-
+   static final byte SetState = 6;  //<-
+   static final byte UploadAutonomous = 7;  //<-
 
    public static ByteBuffer createWelcomePacket() {
       ByteBuffer result = ByteBuffer.allocate(16384); //TODO: this is rlly big
@@ -87,6 +85,13 @@ public class NetworkDefinitions {
       }
 
       //TODO: trim result so we're not sending the full 16K
+
+      return result;
+   }
+
+   public static ByteBuffer createCurrentParametersPacket() {
+      ByteBuffer result = ByteBuffer.allocate(0);
+      result.put(State);
 
       return result;
    }

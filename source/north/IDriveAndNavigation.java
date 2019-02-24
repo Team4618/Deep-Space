@@ -24,4 +24,12 @@ public interface IDriveAndNavigation {
       setDriveSetpoints(path.getLeftSetpoint(), path.getRightSetpoint());
       return path.getProgress();
    }
+
+   //NOTE: IDrive stuff
+   /*----------------------------------------
+   void zeroEncoders();
+   void setMotorPercents(double left, double right);
+   void updateEncoderData();
+   PID stuff??
+   ----------------------------------------*/
 }

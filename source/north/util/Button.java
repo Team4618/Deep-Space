@@ -9,10 +9,11 @@ public class Button {
    public static ArrayList<Button> buttons = new ArrayList<>();
 
    boolean wasDown = false;
-   public boolean released = false;
-   boolean pressBegin = false;
    Supplier<Boolean> down;
 
+   public boolean released = false;
+   public boolean pressBegin = false;
+   
    public Button(Joystick joystick, int buttonIndex) {
       this(() -> joystick.getRawButton(buttonIndex));
    }

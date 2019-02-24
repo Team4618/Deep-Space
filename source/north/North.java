@@ -54,7 +54,7 @@ public class North {
 
       subsystems.values().forEach(Subsystem::initSystem);
       lastTime = Timer.getFPGATimestamp();
-      // Network.init();
+      Network.init();
    }
 
    public static boolean getConditionValue(String condition) {
@@ -77,7 +77,7 @@ public class North {
       state = drive.getState(newTime - lastTime);
       lastTime = newTime;
       
-      // Network.tick();
+      Network.tick();
    }
 
    public static void tickSubsystems() {
@@ -131,4 +131,9 @@ public class North {
    public static void sendPath(String text, Vector2... points) {
 
    } 
+
+
+   public static void sendCurrentParameters() {
+
+   }
 }

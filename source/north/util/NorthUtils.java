@@ -1,11 +1,10 @@
 package north.util;
 
+import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -42,6 +41,10 @@ public class NorthUtils {
          out.write(buffer.array());
          out.close();
       } catch (Exception e) { e.printStackTrace(); }
+   }
+
+   public static boolean doesFileExist(String path) {
+      return (new File("/home/lvuser/" + path)).exists();
    }
 
    //NOTE: maps any angle into 0to360

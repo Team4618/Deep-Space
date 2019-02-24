@@ -22,4 +22,13 @@ public class IDs {
    //NOTE: Pneumatics
    public static final int BALL_INTAKE_RETRACT = 1;
    public static final int BALL_INTAKE_EXTEND = 6;
+
+   public static final int DISC_HOLDER = 0;
+   public static final int DISC_ARM_RETRACT = 2;
+   public static final int DISC_ARM_EXTEND = 5;
+
+   //NOTE: Digital Inputs
+   public static final int BALL_INTAKE_SENSOR = 0;
+   public static final int BALL_CONVEYOR_SENSOR = 1;
+   
 }

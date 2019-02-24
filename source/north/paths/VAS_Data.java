@@ -1,0 +1,1 @@
+//NOTE: voltage acceleration state (speed) function data
