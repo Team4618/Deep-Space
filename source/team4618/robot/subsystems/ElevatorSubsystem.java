@@ -3,8 +3,9 @@ package team4618.robot.subsystems;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 
-import edu.wpi.first.wpilibj.DoubleSolenoid;
-import edu.wpi.first.wpilibj.Solenoid;
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.GenericHID.Hand;
+import north.North;
 import north.Subsystem;
 import north.reflection.Command;
 import north.reflection.Parameter;
@@ -20,12 +21,8 @@ public class ElevatorSubsystem extends Subsystem {
    Parameter max_vel;
    Parameter max_accel;
 
-   public double setpoint = 0;
    public WPI_TalonSRX elev_talon = new WPI_TalonSRX(ELEV_TALON);
-
-   public WPI_VictorSPX ball_conveyor = new WPI_VictorSPX(BALL_CONVEYOR);
-   public Solenoid disc_holder = new Solenoid(DISC_HOLDER);
-   public DoubleSolenoid disc_arm = new DoubleSolenoid(DISC_ARM_EXTEND, DISC_ARM_RETRACT);
+   public DigitalInput bottom_switch = new DigitalInput(ELEV_BOTTOM_SWITCH);
 
    @Override
    public void init() {
@@ -39,28 +36,70 @@ public class ElevatorSubsystem extends Subsystem {
    public double getHeight() { return ft_per_tick * elev_talon.getSensorCollection().getQuadraturePosition(); }
    public double getSpeed() { return ft_per_tick * 10 * elev_talon.getSensorCollection().getQuadratureVelocity(); }
 
-   @Override
-   public void sendDiagnostics() {
-      sendDiagnostic("Height", Feet, getHeight());
+   public static enum State {
+      Unzeroed, //elevator doesnt know where 0 is
+      Uncalibrated, //elevator hasnt calibrated hold voltage
+
+      HandOff, //Lined up with the ball intake
+      Ball,
+      
    }
 
+   final double handoff_height = 0;
+
+   State curr_state = State.Unzeroed;
    ElevatorMotionPlan curr_plan;
    // @Override
    public void __periodic() {
-      if((curr_plan == null) || (curr_plan.setpoint != setpoint)) {
-         curr_plan = new ElevatorMotionPlan(getHeight(), getSpeed(), setpoint, 
-                                            max_vel.get(), max_accel.get());
+      double setpoint = 0;
+
+      switch(curr_state) {
+         case Unzeroed: {
+            // elev_talon.set(NorthUtils.getPercent(voltage));
+            
+            if(bottom_switch.get()) {
+               elev_talon.setSelectedSensorPosition(0, 0, 0);
+               curr_state = State.Uncalibrated;
+            }
+         } break;
+         
+         case Uncalibrated: {
+            //TODO: automatic calibration
+            curr_state = State.HandOff;
+         } break;
+
+         case HandOff: {
+            setpoint = handoff_height;
+         } break;
+
+         case Ball: {
+            
+         } break;
       }
 
-      double error = curr_plan.getSetpoint() - getHeight();
-      double voltage = hold_voltage.get() + p_gain.get() * error;
-      elev_talon.set(NorthUtils.getPercent(voltage));
+      if(curr_state != State.Uncalibrated) {
+         if((curr_plan == null) || (curr_plan.setpoint != setpoint)) {
+            curr_plan = new ElevatorMotionPlan(getHeight(), getSpeed(), setpoint, 
+                                               max_vel.get(), max_accel.get());
+         }
+   
+         double error = curr_plan.getSetpoint() - getHeight();
+         double voltage = hold_voltage.get() + p_gain.get() * error;
+         elev_talon.set(NorthUtils.getPercent(voltage));
+      } 
    }
 
-   // @Command
-   // public boolean calibrate() {
-   //    return false;
-   // }
+   public boolean readyForHandOff() {
+      boolean stopped = Math.abs(getSpeed()) < 0.01;
+      boolean at_position = Math.abs(getHeight() - handoff_height) < 0.01;
+      return (curr_state == State.HandOff) && stopped && at_position;
+   }
+
+   @Override
+   public void sendDiagnostics() {
+      sendDiagnostic("Height", Feet, getHeight());
+      North.sendMessage(Message, "Elev State: " + curr_state.toString());
+   }
 
    @Override
    public String name() { return "Elevator"; }

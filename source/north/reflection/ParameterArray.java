@@ -24,16 +24,29 @@ public class ParameterArray {
       if(i < values.length) {
          values[i] = val;
       }
+
+      writeParamArrayFile(file_name, values);
       North.sendCurrentParameters();
    }
 
    public void append(double val) {
+      double[] new_values = new double[values.length + 1];
+      System.arraycopy(values, 0, new_values, 0, values.length);
+      new_values[values.length] = val;
+      values = new_values;
 
+      writeParamArrayFile(file_name, values);
       North.sendCurrentParameters();
    }
 
    public void remove(int i) {
-      
+      //TODO: test this, not sure if it works
+      double[] new_values = new double[values.length - 1];
+      System.arraycopy(values, 0, new_values, 0, i);
+      System.arraycopy(values, i + 1, new_values, i, values.length - i - 1);
+      values = new_values;
+
+      writeParamArrayFile(file_name, values);
       North.sendCurrentParameters();
    }
 
@@ -41,6 +54,7 @@ public class ParameterArray {
       return values[i];
    }
 
+   //-----------------------------------
    public static double[] readParamArrayFile(String file_name) {
       ByteBuffer file = NorthUtils.read(file_name);
       int param_count = file.getInt();

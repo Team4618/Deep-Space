@@ -134,6 +134,10 @@ public class North {
 
 
    public static void sendCurrentParameters() {
-
+      subsystems.values().forEach(s -> 
+         s.params.forEach((name, param) -> {
+            //TODO
+         }
+      ));
    }
 }

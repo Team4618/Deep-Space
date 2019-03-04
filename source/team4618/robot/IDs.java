@@ -28,7 +28,7 @@ public class IDs {
    public static final int DISC_ARM_EXTEND = 5;
 
    //NOTE: Digital Inputs
-   public static final int BALL_INTAKE_SENSOR = 0;
-   public static final int BALL_CONVEYOR_SENSOR = 1;
-   
+   public static final int BALL_INTAKE_SENSOR = 6;
+   public static final int BALL_CONVEYOR_SENSOR = 0;
+   public static final int ELEV_BOTTOM_SWITCH = 1;
 }

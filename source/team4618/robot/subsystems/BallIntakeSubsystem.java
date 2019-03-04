@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import north.Subsystem;
 import north.reflection.Parameter;
+import team4618.robot.Robot;
 
 import static team4618.robot.IDs.*;
 
@@ -22,39 +23,28 @@ public class BallIntakeSubsystem extends Subsystem {
    public static enum DesiredState {
       Idle,
       Intaking,
-      FrontShoot,
+      BackShoot,
    }
 
    boolean desired_state_set = false;
-   DesiredState desired_state = DesiredState.Idle;
+   public DesiredState desired_state = DesiredState.Idle;
    public void setState(DesiredState state) {
       desired_state_set = true;
       desired_state = state;
    }
-   
-   public void toggleIntaking() {
-      if(desired_state != DesiredState.Intaking) {
-         setState(DesiredState.Intaking);
-      } else {
-         setState(DesiredState.Idle);
-      }
-   }
 
-   public void frontShoot() {
-      setState(DesiredState.FrontShoot);
+   public boolean hasBall() {
+      return !ball_sensor.get();
    }
 
    public static enum State {
       Idle, //arms up, no ball
-      Intaking, //arm down, no ball
-      GoingUp, //arm going up, has ball
-      Hold,  //arm up, has ball (waiting on elev or something) 
-      PassOff, //arms up, has ball & elev in position
-      FrontShoot,
+      Intaking, //arm down, roller spinning, waiting for ball
+      HandOff, //arms up/going up, has ball & elev in position
+      BackShoot //
    }
 
    State curr_state = State.Idle;
-   double last_arm_change = 0;
 
    @Override
    public void periodic() {
@@ -63,72 +53,47 @@ public class BallIntakeSubsystem extends Subsystem {
             arm.set(Value.kReverse);
             roller.set(0);
 
-            if(ball_sensor.get()) {
-               curr_state = State.Hold;
-            } else if(desired_state == DesiredState.Intaking) {
+            if((desired_state == DesiredState.Intaking) && 
+               Robot.elevator.readyForHandOff())
+            {
                curr_state = State.Intaking;
-            } else if(desired_state == DesiredState.FrontShoot) {
-               curr_state = State.FrontShoot;
+            } else if(desired_state == DesiredState.BackShoot) {
+               curr_state = State.BackShoot;
             }
          } break;
          
          case Intaking: {
             arm.set(Value.kForward);
-            roller.set(-1 /*intake_speed.get()*/);
+            roller.set(-0.75 /*intake_speed.get()*/);
 
             if(desired_state == DesiredState.Idle) {
                curr_state = State.Idle;
-            } else if(ball_sensor.get()) {
-               curr_state = State.GoingUp;
+            } else if(hasBall()) {
+               curr_state = State.HandOff;
             }
          } break;
 
-         case GoingUp: {
-            if(arm.get() == Value.kForward) {
-               last_arm_change = Timer.getFPGATimestamp();
-            }
-
+         case HandOff: {
             arm.set(Value.kReverse);
-            roller.set(0);
+            roller.set(-0.75);
 
-            if((Timer.getFPGATimestamp() - last_arm_change) > arm_change_time.get()) {
-               curr_state = State.Hold;
+            if(Robot.carriage.hasBall()) {
+               curr_state = State.Idle;
+               desired_state = DesiredState.Idle;
             }
          } break;
 
-         case Hold: {
+         case BackShoot: {
             arm.set(Value.kReverse);
-            roller.set(0);
+            roller.set(-1);
             
-            if(!ball_sensor.get()) {
-               curr_state = State.Idle;
-            } else if(desired_state == DesiredState.FrontShoot) {
-               curr_state = State.FrontShoot;
-            } /* else if(???) {
-               curr_state = State.PassOff;
-            } */
-            //TODO: if the sensor fails we want a way to intake while it thinks its holding a ball
-         } break;
-
-         case PassOff: {
-            //TODO
-            arm.set(Value.kReverse);
-            roller.set(0);
-         } break;
-
-         case FrontShoot: {
-            arm.set(Value.kReverse);
-            roller.set(1);
-
             if(desired_state == DesiredState.Idle) {
                curr_state = State.Idle;
-            } else if(desired_state == DesiredState.Intaking) {
-               curr_state = State.Intaking;
             }
          } break;
       }
 
-      if(!desired_state_set && (desired_state == DesiredState.FrontShoot)) {
+      if(!desired_state_set && (desired_state == DesiredState.BackShoot)) {
          desired_state = DesiredState.Idle;
       }
       desired_state_set = false;

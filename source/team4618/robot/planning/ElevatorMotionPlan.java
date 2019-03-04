@@ -51,4 +51,8 @@ public class ElevatorMotionPlan {
 
       return plan.getInterpolated(t);
    }
+
+   // public boolean doneMotion() {
+
+   // }
 }
