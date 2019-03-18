@@ -1,8 +1,7 @@
 package north;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
 
 import north.util.Vector2;
 
@@ -48,9 +47,9 @@ public class Diagnostics {
    }
 
    public static class StateGroup {
-      Queue<StateMessage> pending_messages = new LinkedList<>();
-      Queue<StateMarker> pending_markers = new LinkedList<>();
-      Queue<StatePath> pending_paths = new LinkedList<>();
+      ArrayList<StateMessage> pending_messages = new ArrayList<>();
+      ArrayList<StateMarker> pending_markers = new ArrayList<>();
+      ArrayList<StatePath> pending_paths = new ArrayList<>();
       HashMap<String, StateDiagnostic> pending_diagnostics = new HashMap<>();
    }
 

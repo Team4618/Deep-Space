@@ -2,11 +2,12 @@ package north;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import edu.wpi.first.wpilibj.Timer;
 import north.autonomous.IExecutable;
-import north.autonomous.Node;
+// import north.autonomous.Node;
 import north.drivecontroller.IDriveController;
 import north.network.Network;
 import north.util.Button;
@@ -14,20 +15,12 @@ import north.util.Vector2;
 
 public class North {
    public static double lastTime;
-
    public static RobotState state;
-   
-   //TODO: replace robot state with this?
-   // public static RobotPose state;
-   // public static EncoderData encoder;
 
    public static String name;
    public static double width;
    public static double length;
    public static IDriveAndNavigation drive;
-
-   public static HashMap<String, Subsystem> subsystems = new HashMap<>();
-   public static HashMap<String, Method> conditions = new HashMap<>();
 
    //NOTE: width & length are in ft 
    public static void init(String _name, double _width, double _length, IDriveAndNavigation _drive) {
@@ -36,23 +29,19 @@ public class North {
       length = _length;
       drive = _drive; 
       
-      subsystems.values().forEach(Subsystem::initSystem);
       lastTime = Timer.getFPGATimestamp();
       Network.init();
    }
 
-   public static boolean getConditionValue(String condition) {
-      if(conditions.containsKey(condition)) {
-         Method conditionFunc = conditions.get(condition);
-         try {
-            Object res = conditionFunc.invoke(null);
-            if(res instanceof Boolean)
-               return (Boolean) res;
-         } catch (Exception e) { e.printStackTrace(); }
-      } else {
-         System.err.println("Condition " + condition + " not found");
-      }
-      return false;
+   //NOTE: these only get called while enabled
+   public static ArrayList<Runnable> periodic_functions = new ArrayList<>();
+   public static void addPeriodic(Runnable func) {
+      periodic_functions.add(func);
+   }
+
+   public static ArrayList<Runnable> diagnostics_functions = new ArrayList<>();
+   public static void addDiagnosticsCallback(Runnable func) {
+      diagnostics_functions.add(func);
    }
 
    public static void tick() {
@@ -61,15 +50,8 @@ public class North {
       state = drive.getState(newTime - lastTime);
       lastTime = newTime;
       
-      subsystems.values().forEach(Subsystem::sendDiagnostics);
+      diagnostics_functions.forEach(Runnable::run);
       Network.tick();
-   }
-
-   public static void tickSubsystems() {
-      subsystems.values().forEach(s -> {
-         if(s.periodicEnabled)
-            s.periodic();
-      });
    }
 
    public static IDriveController default_drive_controller = null;
@@ -102,6 +84,8 @@ public class North {
 
       curr_drive_controller = new_controller;
       curr_drive_controller.periodic();
+
+      periodic_functions.forEach(Runnable::run);
    }
 
    public static boolean executionDone() {
@@ -117,7 +101,7 @@ public class North {
          current_executable = exec;
    }
 
-   public static Node auto_starting_node = null;
+   // public static Node auto_starting_node = null;
 
    //NOTE: diagnostics stuff
    public static void sendMessage(String group, byte type, String text) {
@@ -137,10 +121,10 @@ public class North {
    }
 
    public static void sendCurrentParameters() {
-      subsystems.values().forEach(s -> 
-         s.params.forEach((name, param) -> {
-            //TODO
-         }
-      ));
+      // subsystems.values().forEach(s -> 
+      //    s.params.forEach((name, param) -> {
+      //       //TODO
+      //    }
+      // ));
    }
 }

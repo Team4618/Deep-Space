@@ -3,7 +3,6 @@ package north.autonomous;
 import java.util.ArrayList;
 
 import north.North;
-import north.autonomous.commands.ICommandInstance;
 
 public class Node implements IExecutable {
    Path in_path;
@@ -28,7 +27,7 @@ public class Node implements IExecutable {
      }
       
       for(Path out_path : out_paths) {
-         if((out_path.condition == null) || North.getConditionValue(out_path.condition)) {
+         if((out_path.condition == null) || false /*North.getConditionValue(out_path.condition)*/ ) {
             return new Pivot(out_path.initial_angle, out_path);
          }
       }

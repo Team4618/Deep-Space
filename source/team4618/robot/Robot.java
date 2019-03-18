@@ -11,7 +11,6 @@ import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import north.North;
 import north.NorthSequence;
-import north.Subsystem;
 import north.drivecontroller.HoldController;
 import north.drivecontroller.TeleopController;
 import north.util.Button;
@@ -31,6 +30,9 @@ public class Robot extends TimedRobot {
    public static ElevCarriageSubsystem carriage = new ElevCarriageSubsystem();
    
    public void robotInit() {
+      // North.registerCommand("setSetpoint", (params) -> ??, ["Setpoint"]);
+      // North.registerCondition("atSetpoint", elevator::atSetpoint);
+
       //NOTE: init(name, size, logic provider, drive & nav)
       North.init(/*NorthUtils.readText("name.txt")*/ "lawn chair", 24/12, 24/12, drive);
       North.default_drive_controller = HoldController.I;
@@ -44,7 +46,6 @@ public class Robot extends TimedRobot {
       
       if(isEnabled()) {
          North.tickExecution();
-         North.tickSubsystems();
       }
 
       if(recalibrate.released) {
@@ -59,9 +60,7 @@ public class Robot extends TimedRobot {
 
    public void autonomousInit() {
       North.default_drive_controller = HoldController.I;
-      North.execute(North.auto_starting_node);
-
-      North.subsystems.values().forEach(Subsystem::reset);
+      // North.execute(North.auto_starting_node);
    }
 
    public void autonomousPeriodic() { }
@@ -70,12 +69,23 @@ public class Robot extends TimedRobot {
    Button pivotButton = new Button(driver, LOGI_PAD_RB);
 
    TeleopController TELEOP = new TeleopController(() -> {
-      return DriveControls.poofsDrive(-driver.getRawAxis(1), driver.getRawAxis(4), pivotButton.isDown());
+      double move = -driver.getRawAxis(1);
+      double turn = driver.getRawAxis(4);
+      
+      if(pivotButton.isDown()) {
+         return DriveControls.arcadeDrive(0.5 * move, 0.5 * turn, true);
+      } else {
+         return DriveControls.arcadeDrive(move, turn, true); //DriveControls.curvatureDrive(move, turn);
+      }
    });
 
    Button toggleBallIntaking = new Button(driver, LOGI_PAD_X);
    Button ballFrontShoot = new Button(driver, LOGI_PAD_A);
    Button ballBackShoot = new Button(driver, LOGI_PAD_B);
+
+   int setpoint = 0;
+   Button upSetpoint = new Button(op, LOGI_STICK_6);
+   Button downSetpoint = new Button(op, LOGI_STICK_7);
 
    ToggleButton discHolder = new ToggleButton(driver, LOGI_PAD_Y, false);
    ToggleButton discArm = new ToggleButton(driver, LOGI_PAD_LB, false);
@@ -120,6 +130,19 @@ public class Robot extends TimedRobot {
             ball_intake.stopRoller();
             carriage.stopConveyor();;
          }
+      }
+
+      if(North.executionDone()) {
+         if(upSetpoint.released && (setpoint < (elevator.ball_setpoints.length - 1) )) {
+            setpoint++;
+         }
+
+         if(downSetpoint.released && (setpoint > 0)) {
+            setpoint--;
+         }
+
+         //TODO: dont put this in an executionDone condition, itll just change setpoint as soon as it finishes executing and not be smooth
+         elevator.setSetpoint(elevator.ball_setpoints[setpoint] + op.getRawAxis(1));
       }
 
       if(elevator.manual) {

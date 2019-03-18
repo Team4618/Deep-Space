@@ -7,8 +7,7 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
 import north.North;
 import north.NorthSequence;
-import north.Subsystem;
-import north.reflection.Parameter;
+import north.parameters.*;
 import north.util.NorthUtils;
 import team4618.robot.Robot;
 import team4618.robot.planning.ElevatorMotionPlan;
@@ -16,7 +15,7 @@ import team4618.robot.planning.ElevatorMotionPlan;
 import static north.network.NetworkDefinitions.*;
 import static team4618.robot.IDs.*;
 
-public class ElevatorSubsystem extends Subsystem {
+public class ElevatorSubsystem {
    Parameter hold_voltage;
    Parameter p_gain;
    Parameter max_vel;
@@ -25,12 +24,14 @@ public class ElevatorSubsystem extends Subsystem {
    public WPI_TalonSRX elev_talon = new WPI_TalonSRX(ELEV_TALON);
    public DigitalInput bottom_switch = new DigitalInput(ELEV_BOTTOM_SWITCH);
 
-   @Override
-   public void init() {
+   public ElevatorSubsystem() {
       WPI_VictorSPX victor1 = new WPI_VictorSPX(ELEV_VICTOR_1);
       victor1.follow(elev_talon);
       WPI_VictorSPX victor2 = new WPI_VictorSPX(ELEV_VICTOR_2);
       victor2.follow(elev_talon);
+
+      North.addPeriodic(this::periodic);
+      North.addDiagnosticsCallback(this::sendDiagnostics);
    }
 
    public static final int number_of_stages = 2;
@@ -74,7 +75,6 @@ public class ElevatorSubsystem extends Subsystem {
                                           .Do(() -> calibrated = true)
                                           .End();
 
-   @Override
    public void periodic() {
       if(!manual) {
          if(calibrated) {
@@ -111,15 +111,11 @@ public class ElevatorSubsystem extends Subsystem {
 
    public static final String NAME = "Elevator";
 
-   @Override
    public void sendDiagnostics() {
-      sendDiagnostic("Height", Feet, getHeight());
+   //    sendDiagnostic("Height", Feet, getHeight());
       // North.sendMessage(NAME, Message, "Elev State: " + curr_state.toString());
 
       // System.out.println("Height " + getHeight());
       // System.out.println("Bottom Switch " + bottom_switch.get());
    }
-
-   @Override
-   public String name() { return "Elevator"; }
 }

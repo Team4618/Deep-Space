@@ -6,13 +6,12 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
-import north.Subsystem;
-import north.reflection.Parameter;
+import north.parameters.*;
 import team4618.robot.Robot;
 
 import static team4618.robot.IDs.*;
 
-public class BallIntakeSubsystem extends Subsystem {
+public class BallIntakeSubsystem {
    public DoubleSolenoid arm = new DoubleSolenoid(BALL_INTAKE_EXTEND, BALL_INTAKE_RETRACT);
    public WPI_VictorSPX roller = new WPI_VictorSPX(BALL_INTAKE);
    DigitalInput ball_sensor = new DigitalInput(BALL_INTAKE_SENSOR);
@@ -46,10 +45,4 @@ public class BallIntakeSubsystem extends Subsystem {
    public void goUp() {
       arm.set(Value.kReverse);
    }
-
-   @Override
-   public void init() { }
-
-   @Override
-   public String name() { return "Ball Intake"; }
 }

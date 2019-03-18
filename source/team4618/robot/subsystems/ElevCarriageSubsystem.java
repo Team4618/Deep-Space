@@ -1,17 +1,13 @@
 package team4618.robot.subsystems;
 
-import north.Subsystem;
-import team4618.robot.Robot;
-
 import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
-import edu.wpi.first.wpilibj.Solenoid;
 
 import static team4618.robot.IDs.*;
 
-public class ElevCarriageSubsystem extends Subsystem {
+public class ElevCarriageSubsystem {
    public WPI_VictorSPX ball_conveyor = new WPI_VictorSPX(BALL_CONVEYOR);
    public DoubleSolenoid disc_holder = new DoubleSolenoid(DISC_HOLDER_EXTEND, DISC_HOLDER_RETRACT);
    public DoubleSolenoid disc_arm = new DoubleSolenoid(DISC_ARM_EXTEND, DISC_ARM_RETRACT);
@@ -36,10 +32,4 @@ public class ElevCarriageSubsystem extends Subsystem {
    public void stopConveyor() {
       ball_conveyor.set(0);
    }
-
-   @Override
-   public void init() { }
-
-   @Override
-   public String name() { return "Elev Carriage"; }
 }
