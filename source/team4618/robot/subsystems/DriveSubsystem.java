@@ -93,8 +93,8 @@ public class DriveSubsystem extends Subsystem implements IDriveAndNavigation {
          sendDiagnostic("TEST M getCompassHeading", Degrees, navx.getCompassHeading());
          sendDiagnostic("TEST F getFusedHeading", Degrees, navx.getFusedHeading());
 
-         if(!navx.isMagnetometerCalibrated()) North.sendMessage(Warning, "Magnetometer Not Calibrated");
-         if(navx.isMagneticDisturbance()) North.sendMessage(Warning, "Magnetic Disturbance");
+         // if(!navx.isMagnetometerCalibrated()) North.sendMessage(Warning, "Magnetometer Not Calibrated");
+         // if(navx.isMagneticDisturbance()) North.sendMessage(Warning, "Magnetic Disturbance");
 
          //TODO: fix the units on these
          sendDiagnostic("X Accel", Unitless, navx.getWorldLinearAccelX());
@@ -104,7 +104,7 @@ public class DriveSubsystem extends Subsystem implements IDriveAndNavigation {
          sendDiagnostic("X Pos", Unitless, navx.getDisplacementX());
          sendDiagnostic("Y Pos", Unitless, navx.getDisplacementY());
 
-      North.sendMessage(Message, currently_automatic ? "Drive PID Control" : "Drive Power Control");
+      // North.sendMessage(Message, currently_automatic ? "Drive PID Control" : "Drive Power Control");
    }
 
    public double getSpeed() {
@@ -123,39 +123,55 @@ public class DriveSubsystem extends Subsystem implements IDriveAndNavigation {
       right.talon.setSelectedSensorPosition(0, 0, 0);
    }
 
-   public void teleop(DriveControls values) {
-      assert(!currently_automatic);
-      left.talon.set(values.left);
-      right.talon.set(values.right);
+   @Override
+   public EncoderData getEncoders() {
+      EncoderData result = new EncoderData();
+      result.left_p = left.getDistance();
+      result.left_v = left.getRate();
+      result.right_p = right.getDistance();
+      result.right_p = right.getRate();
+      return result;
    }
 
    @Override
-   public void setAutomaticControl(boolean set_automatic) {
-      if(set_automatic && !currently_automatic) {
-         zeroEncoders();
-
-         left.setPositionSetpoint(0);
-         right.setPositionSetpoint(0);
-      } else if(!set_automatic && currently_automatic) {
-         left.talon.set(0);
-         right.talon.set(0);
-      }
-
-      if(set_automatic) {
-         assert(left.talon.getControlMode() == ControlMode.Position);
-         assert(right.talon.getControlMode() == ControlMode.Position);
-      } else {
-         assert(left.talon.getControlMode() == ControlMode.PercentOutput);
-         assert(right.talon.getControlMode() == ControlMode.PercentOutput);
-      }
+   public void setMotorPercents(double left_percent, double right_percent) {
+      left.talon.set(left_percent);
+      right.talon.set(right_percent);
    }
 
-   @Override
-   public void setDriveSetpoints(double left_val, double right_val) {
-      assert(currently_automatic);
-      left.setPositionSetpoint(left_val);
-      right.setPositionSetpoint(right_val);
-   }
+   // public void teleop(DriveControls values) {
+   //    assert(!currently_automatic);
+   //    left.talon.set(values.left);
+   //    right.talon.set(values.right);
+   // }
+
+   // @Override
+   // public void setAutomaticControl(boolean set_automatic) {
+   //    if(set_automatic && !currently_automatic) {
+   //       zeroEncoders();
+
+   //       left.setPositionSetpoint(0);
+   //       right.setPositionSetpoint(0);
+   //    } else if(!set_automatic && currently_automatic) {
+   //       left.talon.set(0);
+   //       right.talon.set(0);
+   //    }
+
+   //    if(set_automatic) {
+   //       assert(left.talon.getControlMode() == ControlMode.Position);
+   //       assert(right.talon.getControlMode() == ControlMode.Position);
+   //    } else {
+   //       assert(left.talon.getControlMode() == ControlMode.PercentOutput);
+   //       assert(right.talon.getControlMode() == ControlMode.PercentOutput);
+   //    }
+   // }
+
+   // @Override
+   // public void setDriveSetpoints(double left_val, double right_val) {
+   //    assert(currently_automatic);
+   //    left.setPositionSetpoint(left_val);
+   //    right.setPositionSetpoint(right_val);
+   // }
 
    RobotState curr_state = new RobotState(0, 0, 0, 0, 0, 0);
 

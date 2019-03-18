@@ -82,6 +82,10 @@ public class NorthUtils {
       return Math.min(Math.max(min, val), max);
    }
 
+   public static int clamp(int min, int max, int val) {
+      return Math.min(Math.max(min, val), max);
+   }
+
    public static PowerDistributionPanel pdb = new PowerDistributionPanel();
    public static double getPercent(double voltage) {
       return clamp(-1, 1, voltage / pdb.getVoltage());

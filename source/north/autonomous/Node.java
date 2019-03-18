@@ -10,7 +10,13 @@ public class Node implements IExecutable {
    ArrayList<Path> out_paths = new ArrayList<>();
    
    ArrayList<ICommandInstance> commands;
+
    int currently_executing = 0;
+
+   @Override
+   public void init() {
+      currently_executing = 0;
+   }
 
    @Override
    public IExecutable execute() {
@@ -23,16 +29,10 @@ public class Node implements IExecutable {
       
       for(Path out_path : out_paths) {
          if((out_path.condition == null) || North.getConditionValue(out_path.condition)) {
-            return new PivotExecutable(out_path.initial_angle, out_path);
+            return new Pivot(out_path.initial_angle, out_path);
          }
       }
 
       return null;
-   }
-
-   public void reset() {
-      currently_executing = 0;
-      commands.forEach(ICommandInstance::reset);
-      out_paths.forEach(Path::reset);
    }
 }

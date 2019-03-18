@@ -41,34 +41,6 @@ public abstract class Subsystem {
             } catch(Exception e) { e.printStackTrace(); }
          }
       }
-      
-      for(Method function : this.getClass().getDeclaredMethods()) {
-         if(function.isAnnotationPresent(north.reflection.Command.class)) {
-               ArrayList<String> params = new ArrayList<>();
-               boolean error = false;
-
-               Parameter[] parameters = function.getParameters();
-               for(int i = 0; i < parameters.length; i++) {
-                  Parameter param = parameters[i];
-                  if((i == 0) && (param.getType() == CommandState.class)) {
-
-                  } else if(param.getType() == double.class) {
-                     params.add(param.getName());
-                  } else {
-                     System.err.println(name() + ":" + function.getName() + ": Invalid type " + param.getType() + ":" + param.getName());
-                     error = true;
-                  }
-               }
-
-               if((function.getReturnType() != boolean.class) && (function.getReturnType() != void.class)) {
-                  System.err.println(name() + ":" + function.getName() + ": Invalid return type " + function.getReturnType() + ", must be boolean or void");
-                  error = true;
-               }
-
-               if(!error)
-                  commands.put(function.getName(), new Command(this, function, params.toArray(new String[0])));
-         }
-      }
 
       init();
    }

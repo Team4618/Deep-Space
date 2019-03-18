@@ -13,14 +13,21 @@ public class Path implements IExecutable {
    
    double initial_angle;
 
-   PathPlan plan;
    ArrayList<DiscreteEvent> devents;
    ArrayList<ContinuousEvent> cevents;
+
+   PathPlan plan;
+   
+   @Override
+   public void init() {
+      // plan = create plan
+      devents.forEach(DiscreteEvent::reset);
+   }
 
    @Override
    public IExecutable execute() {
       plan.update();
-      PathProgress progress = North.drive.followPath(plan);
+      PathProgress progress = new PathProgress(true, 0) /*North.drive.followPath(plan)*/;
 
       for(DiscreteEvent devent : devents) {
          devent.tick(progress.distance);
@@ -31,11 +38,5 @@ public class Path implements IExecutable {
       }
 
       return progress.done ? out_node : this;
-   }
-
-   public void reset() {
-      devents.forEach(DiscreteEvent::reset);
-      plan.reset();
-      out_node.reset();
    }
 }

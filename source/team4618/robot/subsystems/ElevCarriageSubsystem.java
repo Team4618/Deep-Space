@@ -13,98 +13,28 @@ import static team4618.robot.IDs.*;
 
 public class ElevCarriageSubsystem extends Subsystem {
    public WPI_VictorSPX ball_conveyor = new WPI_VictorSPX(BALL_CONVEYOR);
-   public Solenoid disc_holder = new Solenoid(DISC_HOLDER);
+   public DoubleSolenoid disc_holder = new DoubleSolenoid(DISC_HOLDER_EXTEND, DISC_HOLDER_RETRACT);
    public DoubleSolenoid disc_arm = new DoubleSolenoid(DISC_ARM_EXTEND, DISC_ARM_RETRACT);
    DigitalInput ball_sensor = new DigitalInput(BALL_CONVEYOR_SENSOR);
-
-   public static enum DesiredState {
-      Idle,
-      Intaking,
-      BackShoot,
-      FrontShoot,
-   }
-
-   boolean desired_state_set = false;
-   public DesiredState desired_state = DesiredState.Idle;
-   public void setState(DesiredState state) {
-      desired_state_set = true;
-      desired_state = state;
-   }
 
    public boolean hasBall() {
       return !ball_sensor.get();
    }
 
-   public static enum State {
-      Idle, 
-      HandOff,
-      Holding, 
-      BackShoot,
-      FrontShoot,
+   public void startConveyorForHandOff() {
+      ball_conveyor.set(-0.5);
    }
 
-   State curr_state = State.Idle;
+   public void startConveyorForFrontShoot() {
+      ball_conveyor.set(-1);
+   }
 
-   @Override
-   public void periodic() {
-      switch(curr_state) {
-         case Idle: {
-            ball_conveyor.set(0);
+   public void startConveyorForBackShoot() {
+      ball_conveyor.set(1);
+   }
 
-            if(hasBall()) {
-               curr_state = State.Holding;
-            } else if((desired_state == DesiredState.Intaking) &&
-                      Robot.elevator.readyForHandOff())
-            {
-               curr_state = State.HandOff;
-            } else if(desired_state == DesiredState.FrontShoot) {
-               curr_state = State.FrontShoot;
-            } else if(desired_state == DesiredState.BackShoot) {
-               curr_state = State.BackShoot;
-            }
-         } break;
-
-         case HandOff: {
-            ball_conveyor.set(-1);
-
-            if(hasBall()) {
-               curr_state = State.Holding;
-               desired_state = DesiredState.Idle;
-            }
-         } break;
-         
-         case Holding: {
-            ball_conveyor.set(0);
-
-            if(!hasBall()) {
-               curr_state = State.Idle;
-            }
-         } break; 
-         
-         case BackShoot: {
-            ball_conveyor.set(1);
-
-            if(desired_state == DesiredState.Idle) {
-               curr_state = State.Idle;
-            }
-         } break;
-
-         case FrontShoot: {
-            ball_conveyor.set(-1);
-            
-            if(desired_state == DesiredState.Idle) {
-               curr_state = State.Idle;
-            }
-         } break;
-      }
-
-      if(!desired_state_set && 
-         ((desired_state == DesiredState.BackShoot) || 
-          (desired_state == DesiredState.FrontShoot)))
-      {
-         desired_state = DesiredState.Idle;
-      }
-      desired_state_set = false;
+   public void stopConveyor() {
+      ball_conveyor.set(0);
    }
 
    @Override

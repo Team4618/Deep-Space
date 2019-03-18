@@ -10,9 +10,10 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import north.North;
+import north.NorthSequence;
 import north.Subsystem;
-import north.autonomous.PivotExecutable;
-import north.reflection.Logic;
+import north.drivecontroller.HoldController;
+import north.drivecontroller.TeleopController;
 import north.util.Button;
 import north.util.DriveControls;
 import north.util.NorthUtils;
@@ -31,127 +32,109 @@ public class Robot extends TimedRobot {
    
    public void robotInit() {
       //NOTE: init(name, size, logic provider, drive & nav)
-      North.init(/*NorthUtils.readText("name.txt")*/ "lawn chair", 24/12, 24/12, getClass(), drive);
+      North.init(/*NorthUtils.readText("name.txt")*/ "lawn chair", 24/12, 24/12, drive);
+      North.default_drive_controller = HoldController.I;
    }
 
-   // public static enum DesiredState {
-   //    Idle,
-   //    Intaking,
-   //    BackShoot,
-   //    FrontShoot,
-   // }
-
-   // boolean desired_state_set = false;
-   // public DesiredState desired_state = DesiredState.Idle;
-   // public void setState(DesiredState state) {
-   //    desired_state_set = true;
-   //    desired_state = state;
-   // }
+   Button recalibrate = new Button(op, LOGI_STICK_8);
+   Button toggleElevatorManual = new Button(op, LOGI_STICK_9);
 
    public void robotPeriodic() {
       North.tick();
       
-      // if(!desired_state_set &&
-      //    ((desired_state == DesiredState.BackShoot) ||
-      //     (desired_state == DesiredState.FrontShoot))) 
-      // {
-      //    desired_state = DesiredState.Idle;
-      // }
-      // desired_state_set = false;
+      if(isEnabled()) {
+         North.tickExecution();
+         North.tickSubsystems();
+      }
 
-      // if(op.getRawButton(8)) {
-      //    drive.navx.zeroYaw();
-      // }
+      if(recalibrate.released) {
+         drive.navx.zeroYaw();
+         elevator.calibrated = false;
+      }
+
+      if(toggleElevatorManual.released) {
+         elevator.manual = !elevator.manual;
+      }
    }
 
    public void autonomousInit() {
-      if(North.auto_starting_node != null)
-         North.auto_starting_node.reset();
-
+      North.default_drive_controller = HoldController.I;
       North.execute(North.auto_starting_node);
+
       North.subsystems.values().forEach(Subsystem::reset);
    }
 
-   public void autonomousPeriodic() {
-      North.tickExecution();
-      North.tickSubsystems();
-   }
+   public void autonomousPeriodic() { }
 
    Button stopAuto = new Button(op, LOGI_STICK_TRIGGER);
    Button pivotButton = new Button(driver, LOGI_PAD_RB);
 
+   TeleopController TELEOP = new TeleopController(() -> {
+      return DriveControls.poofsDrive(-driver.getRawAxis(1), driver.getRawAxis(4), pivotButton.isDown());
+   });
+
    Button toggleBallIntaking = new Button(driver, LOGI_PAD_X);
-   Button ballBackShoot = new Button(driver, LOGI_PAD_Y);
+   Button ballFrontShoot = new Button(driver, LOGI_PAD_A);
+   Button ballBackShoot = new Button(driver, LOGI_PAD_B);
 
-   Button ballConveyor = new Button(driver, LOGI_PAD_B);
-   // DriveController teleopController = new TeleopController();
-
-   ToggleButton discHolder = new ToggleButton(driver, LOGI_PAD_A, false);
+   ToggleButton discHolder = new ToggleButton(driver, LOGI_PAD_Y, false);
    ToggleButton discArm = new ToggleButton(driver, LOGI_PAD_LB, false);
 
-   public void teleopInit() { }
+   public void teleopInit() { 
+      North.default_drive_controller = TELEOP;
+   }
+
+   NorthSequence intake_sequence = NorthSequence.Begin()
+                                                .Do(() -> elevator.setSetpoint(elevator.handoff_height) )
+                                                .Wait(elevator::atSetpoint)
+                                                .Do(carriage::startConveyorForHandOff)
+                                                .Do(ball_intake::startRollerForIntake)
+                                                .Do(ball_intake::goDown)
+                                                .Wait(ball_intake::hasBall)
+                                                .Do(ball_intake::goUp)
+                                                .Wait(carriage::hasBall)
+                                                .Do(carriage::stopConveyor)
+                                                .Do(ball_intake::stopRoller)
+                                                .End();
 
    public void teleopPeriodic() {
-      if(North.executionDone()) {
-         // North.setDriveController(teleopController);
-         drive.setAutomaticControl(false);
-
-         teleopControl();
-      } else {
-         if(stopAuto.released) {
-            North.stopExecution();
-         }
-
-         North.tickExecution();
-      }
-
-      North.tickSubsystems();
-   }
-
-   //---------------------------------------
-   public void toggleIntaking() {
-      if(ball_intake.desired_state != BallIntakeSubsystem.DesiredState.Intaking) {
-         ball_intake.setState(BallIntakeSubsystem.DesiredState.Intaking);
-         carriage.setState(ElevCarriageSubsystem.DesiredState.Intaking);
-      } else {
-         ball_intake.setState(BallIntakeSubsystem.DesiredState.Idle);
-         carriage.setState(ElevCarriageSubsystem.DesiredState.Idle);
-      }
-   }
-
-   public void backShoot() {
-      ball_intake.setState(BallIntakeSubsystem.DesiredState.BackShoot);
-      carriage.setState(ElevCarriageSubsystem.DesiredState.BackShoot);
-   }
-   //---------------------------------------
-
-   public void teleopControl() {
-      // teleopController.drive(DriveControls.poofsDrive(-driver.getRawAxis(1), driver.getRawAxis(4), pivotButton.isDown()));
-      drive.teleop(DriveControls.poofsDrive(-driver.getRawAxis(1), driver.getRawAxis(4), pivotButton.isDown()));
-
       if(toggleBallIntaking.released) {
-         toggleIntaking();
+         if(intake_sequence.isExecuting()) {
+            North.stopExecution();
+         } else {
+            North.execute(intake_sequence);
+         }
       }
 
-      if(ballBackShoot.isDown()) {
-         backShoot();
+      //NOTE: only control the ball intake & carriage if its not being automatically controlled
+      if(North.executionDone()) {
+         ball_intake.goUp();
+
+         if(ballFrontShoot.isDown()) {
+            ball_intake.stopRoller();
+            carriage.startConveyorForFrontShoot();
+         } else if(ballBackShoot.isDown()) {
+            ball_intake.startRollerForBackShoot();
+            carriage.startConveyorForBackShoot();
+         } else {
+            ball_intake.stopRoller();
+            carriage.stopConveyor();;
+         }
       }
 
-      if(stopAuto.isDown()) {
-         elevator.__periodic();
-      } else {
+      if(elevator.manual) {
          double elev_voltage = 12 * (0.85 * op.getRawAxis(1));
          double elev_percent = NorthUtils.getPercent(elev_voltage);      
          elevator.elev_talon.set(elev_percent);
          System.out.println(elev_voltage + "V : " + elev_percent + "%");
       }
 
-      if(elevator.readyForHandOff()) {
-         System.out.println("Ready for handoff");
-      }
-
-      carriage.disc_holder.set(discHolder.state);
+      carriage.disc_holder.set(discHolder.state ? Value.kForward : Value.kReverse);
       carriage.disc_arm.set(discArm.state ? Value.kForward : Value.kReverse);
+
+      if(stopAuto.released) {
+         North.stopExecution();
+      }
    }
 
 //     public void testInit() {

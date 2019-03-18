@@ -6,10 +6,11 @@ import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
 import north.North;
+import north.NorthSequence;
 import north.Subsystem;
-import north.reflection.Command;
 import north.reflection.Parameter;
 import north.util.NorthUtils;
+import team4618.robot.Robot;
 import team4618.robot.planning.ElevatorMotionPlan;
 
 import static north.network.NetworkDefinitions.*;
@@ -32,73 +33,91 @@ public class ElevatorSubsystem extends Subsystem {
       victor2.follow(elev_talon);
    }
 
-   public static final double ft_per_tick = ( (1.751 / 12.0) * Math.PI ) / 4096.0;
+   public static final int number_of_stages = 2;
+   public static final double ft_per_tick = number_of_stages * ( (1.751 / 12.0) * Math.PI ) / 4096.0;
    public double getHeight() { return ft_per_tick * elev_talon.getSensorCollection().getQuadraturePosition(); }
    public double getSpeed() { return ft_per_tick * 10 * elev_talon.getSensorCollection().getQuadratureVelocity(); }
 
-   public static enum State {
-      Unzeroed, //elevator doesnt know where 0 is
-      Uncalibrated, //elevator hasnt calibrated hold voltage
+   public boolean manual = true;
+   public boolean calibrated = false;
 
-      HandOff, //Lined up with the ball intake
-      Ball,
-      
-   }
+   public final double handoff_height = 0;
+   public final double max_height = 5;
+   public final double[] ball_setpoints = new double[]{
+      0, 1, 2, 3, 4
+   };
 
-   final double handoff_height = 0;
-
-   State curr_state = State.Unzeroed;
    ElevatorMotionPlan curr_plan;
-   // @Override
-   public void __periodic() {
-      double setpoint = 0;
-
-      switch(curr_state) {
-         case Unzeroed: {
-            // elev_talon.set(NorthUtils.getPercent(voltage));
-            
-            if(bottom_switch.get()) {
-               elev_talon.setSelectedSensorPosition(0, 0, 0);
-               curr_state = State.Uncalibrated;
-            }
-         } break;
+   double setpoint = 0;
+   
+   public boolean auto_home() {
+      elev_talon.set(NorthUtils.getPercent(2.5 /*volts, positive is down*/));
          
-         case Uncalibrated: {
-            //TODO: automatic calibration
-            curr_state = State.HandOff;
-         } break;
-
-         case HandOff: {
-            setpoint = handoff_height;
-         } break;
-
-         case Ball: {
-            
-         } break;
+      if(!bottom_switch.get()) {
+         System.out.println("Elev Homed");
+         elev_talon.setSelectedSensorPosition(0, 0, 0);
+         return true;
       }
 
-      if(curr_state != State.Uncalibrated) {
-         if((curr_plan == null) || (curr_plan.setpoint != setpoint)) {
-            curr_plan = new ElevatorMotionPlan(getHeight(), getSpeed(), setpoint, 
-                                               max_vel.get(), max_accel.get());
+      return false;
+   }
+
+   public boolean auto_calibrate() {
+      //TODO
+
+      return true;
+   }
+
+   NorthSequence calibration_sequence = NorthSequence.Begin()
+                                          .Do(this::auto_home)
+                                          .Do(this::auto_calibrate)
+                                          .Do(() -> calibrated = true)
+                                          .End();
+
+   @Override
+   public void periodic() {
+      if(!manual) {
+         if(calibrated) {
+            if((curr_plan == null) || ((curr_plan.setpoint - setpoint) > 0.001)) {
+               curr_plan = new ElevatorMotionPlan(getHeight(), getSpeed(), setpoint, 
+                                                  1 /*max_vel.get()*/, 1 /*max_accel.get()*/);
+            }
+      
+            double error = curr_plan.getSetpoint() /*setpoint*/ - getHeight();
+            double voltage = /*hold_voltage.get()*/1.5 + /*p_gain.get()*/ 6 * error;
+            elev_talon.set(NorthUtils.getPercent(-voltage));
+
+            // System.out.println("Curr Setpoint: " + curr_plan.getSetpoint() + " V: " + voltage + " Error: " + error);
+         } else if(!calibration_sequence.isExecuting()) {
+            System.out.println("Calibrating");
+            North.execute(calibration_sequence);
          }
-   
-         double error = curr_plan.getSetpoint() - getHeight();
-         double voltage = hold_voltage.get() + p_gain.get() * error;
-         elev_talon.set(NorthUtils.getPercent(voltage));
-      } 
+      }
+   }
+
+   public void setSetpoint(double val) {
+      setpoint = NorthUtils.clamp(0, max_height, val);
+   }
+
+   public boolean atSetpoint() {
+      boolean stopped = Math.abs(getSpeed()) < 0.1;
+      boolean at_position = Math.abs(getHeight() - setpoint) < 0.25;
+      return stopped && at_position;
    }
 
    public boolean readyForHandOff() {
-      boolean stopped = Math.abs(getSpeed()) < 0.01;
-      boolean at_position = Math.abs(getHeight() - handoff_height) < 0.01;
-      return (curr_state == State.HandOff) && stopped && at_position;
+      return (setpoint == handoff_height) && atSetpoint();
    }
+
+   public static final String NAME = "Elevator";
 
    @Override
    public void sendDiagnostics() {
       sendDiagnostic("Height", Feet, getHeight());
-      North.sendMessage(Message, "Elev State: " + curr_state.toString());
+      // North.sendMessage(NAME, Message, "Elev State: " + curr_state.toString());
+
+      // System.out.println("Height " + getHeight());
+      // System.out.println("Bottom Switch " + bottom_switch.get());
    }
 
    @Override

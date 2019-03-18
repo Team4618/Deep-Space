@@ -1,44 +1,44 @@
 plugins {
-    id "java"
-    id "edu.wpi.first.GradleRIO" version "2019.1.1"
+   id "java"
+   id "edu.wpi.first.GradleRIO" version "2019.1.1"
 }
 
 sourceSets.main.java.srcDirs = ['source']
 
 deploy {
-    targets {
-        roboRIO("roborio") {
-            team = 4618
-        }
-    }
-    artifacts {
-        frcJavaArtifact('frcJava') {
-            targets << "roborio"
-            debug = false
-        }
-		
-		/*
-        fileTreeArtifact('frcStaticFileDeploy') {
-            files = fileTree(dir: 'src/main/deploy')
-            targets << "roborio"
-            directory = '/home/lvuser/deploy'
-        }
-		*/
-    }
+   targets {
+      roboRIO("roborio") {
+         team = 4618
+      }
+   }
+   artifacts {
+      frcJavaArtifact('frcJava') {
+         targets << "roborio"
+         debug = false
+      }
+   
+   /*
+      fileTreeArtifact('frcStaticFileDeploy') {
+         files = fileTree(dir: 'src/main/deploy')
+         targets << "roborio"
+         directory = '/home/lvuser/deploy'
+      }
+   */
+   }
 }
 
 dependencies {
-    compile wpi.deps.wpilib()
-    compile wpi.deps.vendor.java()
-    nativeZip wpi.deps.vendor.jni(wpi.platforms.roborio)
-    nativeDesktopZip wpi.deps.vendor.jni(wpi.platforms.desktop)
+   compile wpi.deps.wpilib()
+   compile wpi.deps.vendor.java()
+   nativeZip wpi.deps.vendor.jni(wpi.platforms.roborio)
+   nativeDesktopZip wpi.deps.vendor.jni(wpi.platforms.desktop)
 }
 
 jar {
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest("team4618.robot.Main")
+   from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+   manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest("team4618.robot.Main")
 }
 
 wrapper {
-    gradleVersion = '5.0'
+   gradleVersion = '5.0'
 }

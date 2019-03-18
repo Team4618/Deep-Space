@@ -22,7 +22,7 @@ public class PivotCommandInstance implements ICommandInstance {
    @Override
    public boolean invoke() {
       plan.update();
-      PathProgress progress = North.drive.followPivot(plan);
+      PathProgress progress = new PathProgress(true, 0) /*North.drive.followPivot(plan)*/;
       
       for(DiscreteEvent devent : devents) {
          devent.tick(progress.distance);

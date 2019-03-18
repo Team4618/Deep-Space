@@ -50,5 +50,16 @@ public class Button {
 
       //NOTE: buttons for logitech joystick
       public static final int LOGI_STICK_TRIGGER = 1;
+      
+      public static final int LOGI_STICK_2 = 2;
+      public static final int LOGI_STICK_3 = 3;
+      public static final int LOGI_STICK_4 = 4;
+      public static final int LOGI_STICK_5 = 5;
+      public static final int LOGI_STICK_6 = 6;
+      public static final int LOGI_STICK_7 = 7;
+      public static final int LOGI_STICK_8 = 8;
+      public static final int LOGI_STICK_9 = 9;
+      public static final int LOGI_STICK_10 = 10;
+      public static final int LOGI_STICK_11 = 11;
    }
 }
