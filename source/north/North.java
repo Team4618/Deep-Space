@@ -10,6 +10,8 @@ import north.autonomous.IExecutable;
 // import north.autonomous.Node;
 import north.drivecontroller.IDriveController;
 import north.network.Network;
+import north.parameters.Parameter;
+import north.parameters.ParameterArray;
 import north.util.Button;
 import north.util.Vector2;
 
@@ -103,28 +105,49 @@ public class North {
 
    // public static Node auto_starting_node = null;
 
+   public static class NorthGroup {
+      public ArrayList<Diagnostics.StateMessage> pending_messages = new ArrayList<>();
+      public ArrayList<Diagnostics.StateMarker> pending_markers = new ArrayList<>();
+      public ArrayList<Diagnostics.StatePath> pending_paths = new ArrayList<>();
+      public HashMap<String, Diagnostics.StateDiagnostic> pending_diagnostics = new HashMap<>();
+
+      public HashMap<String, Parameter> parameters = new HashMap<>();
+      public HashMap<String, ParameterArray> parameter_arrays = new HashMap<>();
+   }
+
+   public static NorthGroup default_group = new NorthGroup();
+   public static HashMap<String, NorthGroup> groups = new HashMap<>();
+
+   public static NorthGroup getOrCreateGroup(String name) {
+      if(name == null) {
+         return default_group;
+      } else {
+         if(!groups.containsKey(name)) {
+            groups.put(name, new NorthGroup());
+         }
+
+         return groups.get(name);
+      }  
+   }
+   
    //NOTE: diagnostics stuff
    public static void sendMessage(String group, byte type, String text) {
-      Diagnostics.getOrCreateGroup(group).pending_messages.add(new Diagnostics.StateMessage(text, type));
+      getOrCreateGroup(group).pending_messages.add(new Diagnostics.StateMessage(text, type));
    } 
    
    public static void sendMarker(String group, Vector2 pos, String text) {
-      Diagnostics.getOrCreateGroup(group).pending_markers.add(new Diagnostics.StateMarker(text, pos));
+      getOrCreateGroup(group).pending_markers.add(new Diagnostics.StateMarker(text, pos));
    }
 
    public static void sendPath(String group, String text, Vector2... points) {
-      Diagnostics.getOrCreateGroup(group).pending_paths.add(new Diagnostics.StatePath(text, points));
+      getOrCreateGroup(group).pending_paths.add(new Diagnostics.StatePath(text, points));
    } 
 
    public static void sendDiagnostic(String group, String name, byte unit, double value) {
-      Diagnostics.getOrCreateGroup(group).pending_diagnostics.put(name, new Diagnostics.StateDiagnostic(unit, value));
+      getOrCreateGroup(group).pending_diagnostics.put(name, new Diagnostics.StateDiagnostic(unit, value));
    }
 
    public static void sendCurrentParameters() {
-      // subsystems.values().forEach(s -> 
-      //    s.params.forEach((name, param) -> {
-      //       //TODO
-      //    }
-      // ));
+      //TODO
    }
 }

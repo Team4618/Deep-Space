@@ -90,8 +90,12 @@ public class Robot extends TimedRobot {
    ToggleButton discHolder = new ToggleButton(driver, LOGI_PAD_Y, false);
    ToggleButton discArm = new ToggleButton(driver, LOGI_PAD_LB, false);
 
+   boolean was_executing = false;
+   boolean just_finished_executing = false;
+
    public void teleopInit() { 
       North.default_drive_controller = TELEOP;
+      was_executing = !North.executionDone();
    }
 
    NorthSequence intake_sequence = NorthSequence.Begin()
@@ -108,6 +112,9 @@ public class Robot extends TimedRobot {
                                                 .End();
 
    public void teleopPeriodic() {
+      just_finished_executing = (North.executionDone() && was_executing);
+      was_executing = !North.executionDone();
+
       if(toggleBallIntaking.released) {
          if(intake_sequence.isExecuting()) {
             North.stopExecution();
@@ -128,8 +135,12 @@ public class Robot extends TimedRobot {
             carriage.startConveyorForBackShoot();
          } else {
             ball_intake.stopRoller();
-            carriage.stopConveyor();;
+            carriage.stopConveyor();
          }
+      }
+
+      if(just_finished_executing) {
+         setpoint = elevator.getClosestSetpoint();
       }
 
       if(North.executionDone()) {

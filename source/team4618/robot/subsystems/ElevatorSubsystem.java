@@ -4,7 +4,6 @@ import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 
 import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.GenericHID.Hand;
 import north.North;
 import north.NorthSequence;
 import north.parameters.*;
@@ -16,10 +15,11 @@ import static north.network.NetworkDefinitions.*;
 import static team4618.robot.IDs.*;
 
 public class ElevatorSubsystem {
-   Parameter hold_voltage;
-   Parameter p_gain;
-   Parameter max_vel;
-   Parameter max_accel;
+   public final String NAME = "Elevator";
+   Parameter hold_voltage = new Parameter(NAME, "Hold Voltage (Volts)");
+   Parameter p_gain = new Parameter(NAME, "kP");
+   Parameter max_vel = new Parameter(NAME, "Max Velocity (ft/s)");
+   Parameter max_accel = new Parameter(NAME, "Max Accel (ft/s^2)");
 
    public WPI_TalonSRX elev_talon = new WPI_TalonSRX(ELEV_TALON);
    public DigitalInput bottom_switch = new DigitalInput(ELEV_BOTTOM_SWITCH);
@@ -88,6 +88,7 @@ public class ElevatorSubsystem {
             elev_talon.set(NorthUtils.getPercent(-voltage));
 
             // System.out.println("Curr Setpoint: " + curr_plan.getSetpoint() + " V: " + voltage + " Error: " + error);
+            North.sendDiagnostic(NAME, "Setpoint", Feet, curr_plan.getSetpoint());
          } else if(!calibration_sequence.isExecuting()) {
             System.out.println("Calibrating");
             North.execute(calibration_sequence);
@@ -105,11 +106,22 @@ public class ElevatorSubsystem {
       return stopped && at_position;
    }
 
+   public int getClosestSetpoint() {
+      double height = getHeight();
+      int result = 0;
+      
+      for(int i = 0; i < ball_setpoints.length; i++) {
+         if(Math.abs(ball_setpoints[result] - height) > Math.abs((ball_setpoints[i] - height))) {
+            result = i;
+         }
+      }
+      
+      return result;
+   }
+
    public boolean readyForHandOff() {
       return (setpoint == handoff_height) && atSetpoint();
    }
-
-   public static final String NAME = "Elevator";
 
    public void sendDiagnostics() {
    //    sendDiagnostic("Height", Feet, getHeight());

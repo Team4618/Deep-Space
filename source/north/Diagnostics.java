@@ -3,6 +3,7 @@ package north;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import north.parameters.Parameter;
 import north.util.Vector2;
 
 public class Diagnostics {
@@ -44,27 +45,5 @@ public class Diagnostics {
          unit = _unit;
          value = _value;
       }
-   }
-
-   public static class StateGroup {
-      ArrayList<StateMessage> pending_messages = new ArrayList<>();
-      ArrayList<StateMarker> pending_markers = new ArrayList<>();
-      ArrayList<StatePath> pending_paths = new ArrayList<>();
-      HashMap<String, StateDiagnostic> pending_diagnostics = new HashMap<>();
-   }
-
-   public static StateGroup default_group = new StateGroup();
-   public static HashMap<String, StateGroup> state_groups = new HashMap<>();
-
-   public static StateGroup getOrCreateGroup(String name) {
-      if(name == null) {
-         return default_group;
-      } else {
-         if(!state_groups.containsKey(name)) {
-            state_groups.put(name, new StateGroup());
-         }
-
-         return state_groups.get(name);
-      }  
    }   
 }

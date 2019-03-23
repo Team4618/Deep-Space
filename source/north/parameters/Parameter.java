@@ -7,8 +7,9 @@ public class Parameter {
    String file_name;
    double value;
 
-   public Parameter(String file_name) {
-      this.file_name = file_name;
+   public Parameter(String group, String name) {
+      this.file_name = "G" + group + "P" + name + ".param_array";
+      North.getOrCreateGroup(group).parameters.put(name, this);
       
       if(NorthUtils.doesFileExist(file_name)) {
          double[] values = ParameterArray.readParamArrayFile(file_name);
