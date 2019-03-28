@@ -5,7 +5,6 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import edu.wpi.first.wpilibj.Timer;
 import north.autonomous.IExecutable;
 // import north.autonomous.Node;
 import north.drivecontroller.IDriveController;
@@ -13,9 +12,13 @@ import north.network.Network;
 import north.parameters.Parameter;
 import north.parameters.ParameterArray;
 import north.util.Button;
+import north.util.NorthUtils;
 import north.util.Vector2;
 
 public class North {
+   //NOTE: if this is false dont use things that only exist on the robot (eg. PowerDistributionPanel or Timer)
+   public static final boolean IS_REAL = false;
+
    public static double lastTime;
    public static RobotState state;
 
@@ -31,7 +34,7 @@ public class North {
       length = _length;
       drive = _drive; 
       
-      lastTime = Timer.getFPGATimestamp();
+      lastTime = NorthUtils.getTimestamp();
       Network.init();
    }
 
@@ -48,7 +51,7 @@ public class North {
 
    public static void tick() {
       Button.tickAll();
-      double newTime = Timer.getFPGATimestamp();
+      double newTime = NorthUtils.getTimestamp();
       state = drive.getState(newTime - lastTime);
       lastTime = newTime;
       

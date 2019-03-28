@@ -1,6 +1,7 @@
 package team4618.robot;
 
 import team4618.robot.subsystems.BallIntakeSubsystem;
+import team4618.robot.subsystems.Climber;
 import team4618.robot.subsystems.DriveSubsystem;
 import team4618.robot.subsystems.ElevCarriageSubsystem;
 import team4618.robot.subsystems.ElevatorSubsystem;
@@ -8,6 +9,8 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
+import edu.wpi.cscore.UsbCamera;
+import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import north.North;
 import north.NorthSequence;
@@ -28,6 +31,7 @@ public class Robot extends TimedRobot {
    public static BallIntakeSubsystem ball_intake = new BallIntakeSubsystem();
    public static ElevatorSubsystem elevator = new ElevatorSubsystem();
    public static ElevCarriageSubsystem carriage = new ElevCarriageSubsystem();
+   // public static Climber climber = new Climber();  
    
    public void robotInit() {
       // North.registerCommand("setSetpoint", (params) -> ??, ["Setpoint"]);
@@ -36,6 +40,9 @@ public class Robot extends TimedRobot {
       //NOTE: init(name, size, logic provider, drive & nav)
       North.init(/*NorthUtils.readText("name.txt")*/ "lawn chair", 24/12, 24/12, drive);
       North.default_drive_controller = HoldController.I;
+
+      UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
+      camera.setResolution(640, 480);
    }
 
    Button recalibrate = new Button(op, LOGI_STICK_8);
@@ -61,9 +68,14 @@ public class Robot extends TimedRobot {
    public void autonomousInit() {
       North.default_drive_controller = HoldController.I;
       // North.execute(North.auto_starting_node);
+
+      //TODO: REMOVE THIS IS TEMPORARY
+      teleopInit();
    }
 
-   public void autonomousPeriodic() { }
+   public void autonomousPeriodic() {
+      teleopPeriodic();
+   }
 
    Button stopAuto = new Button(op, LOGI_STICK_TRIGGER);
    Button pivotButton = new Button(driver, LOGI_PAD_RB);
@@ -100,7 +112,7 @@ public class Robot extends TimedRobot {
 
    NorthSequence intake_sequence = NorthSequence.Begin()
                                                 .Do(() -> elevator.setSetpoint(elevator.handoff_height) )
-                                                .Wait(elevator::atSetpoint)
+                                                // .Wait(elevator::atSetpoint)
                                                 .Do(carriage::startConveyorForHandOff)
                                                 .Do(ball_intake::startRollerForIntake)
                                                 .Do(ball_intake::goDown)
@@ -160,7 +172,7 @@ public class Robot extends TimedRobot {
          double elev_voltage = 12 * (0.85 * op.getRawAxis(1));
          double elev_percent = NorthUtils.getPercent(elev_voltage);      
          elevator.elev_talon.set(elev_percent);
-         System.out.println(elev_voltage + "V : " + elev_percent + "%");
+         // System.out.println(elev_voltage + "V : " + elev_percent + "%");
       }
 
       carriage.disc_holder.set(discHolder.state ? Value.kForward : Value.kReverse);
@@ -168,6 +180,7 @@ public class Robot extends TimedRobot {
 
       if(stopAuto.released) {
          North.stopExecution();
+         North.default_drive_controller = TELEOP;
       }
    }
 

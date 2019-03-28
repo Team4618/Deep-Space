@@ -10,6 +10,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
+import edu.wpi.first.wpilibj.Timer;
+import north.North;
 
 public class NorthUtils {
    public static String readText(String path) {
@@ -86,8 +88,24 @@ public class NorthUtils {
       return Math.min(Math.max(min, val), max);
    }
 
-   public static PowerDistributionPanel pdb = new PowerDistributionPanel();
+   public static PowerDistributionPanel pdb;
    public static double getPercent(double voltage) {
-      return clamp(-1, 1, voltage / pdb.getVoltage());
+      if(North.IS_REAL) {
+         if(pdb == null)
+            pdb = new PowerDistributionPanel();
+
+         return clamp(-1, 1, voltage / pdb.getVoltage());
+      } else {
+         return clamp(-1, 1, voltage / 12);
+      }
+   }
+
+   public static double getTimestamp() {
+      if(North.IS_REAL) {
+         return Timer.getFPGATimestamp();
+      } else {
+         return System.currentTimeMillis() / 1000.0;
+      }
+      
    }
 }

@@ -1,5 +1,7 @@
 package team4618.robot.planning;
 
+import java.util.ArrayList;
+
 import edu.wpi.first.wpilibj.Timer;
 import north.util.InterpolatingMap;
 import north.util.NorthUtils;
@@ -7,12 +9,38 @@ import north.util.NorthUtils;
 public class ElevatorMotionPlan {
    double start_time;
    public double setpoint;
-   InterpolatingMap<Double> plan = new InterpolatingMap<>(InterpolatingMap::doubleLerp);
+   
+   public class PlanPart {
+      double start_time;
+      double end_time;
 
-   //TODO: so im pretty sure this is all wrong (acceleration is represented by a line, which is wrong)
+      double d_0;
+      double a;
+      double v_0;
+
+      public PlanPart(double start_time, double end_time,
+                      double d_0, double a, double v_0)
+      {
+         this.start_time = start_time;
+         this.end_time = end_time;
+
+         this.d_0 = d_0;
+         this.a = a;
+         this.v_0 = v_0;
+      }
+
+      public double getSetpoint(double t) {
+         return d_0 + v_0*t + 0.5*a*t*t;
+      }
+   }
+   
+   ArrayList<PlanPart> plan = new ArrayList<>();
+   // InterpolatingMap<Double> plan = new InterpolatingMap<>(InterpolatingMap::doubleLerp);
+
    public ElevatorMotionPlan(double d_curr, double v_i, double d_dest,
                              double v_max, double a_max)
    {
+      setpoint = d_dest;
       start_time = Timer.getFPGATimestamp();
 
       double sign = (d_dest - d_curr) / Math.abs(d_dest - d_curr);
@@ -29,10 +57,14 @@ public class ElevatorMotionPlan {
          double t_deccel = v_max / a_max;
          double t_coast = (d - d_accel - d_accel) / v_max;
          
-         plan.put(0.0,                          d_curr);
-         plan.put(t_accel,                      d_curr + sign * d_accel);
-         plan.put(t_accel + t_coast,            d_dest - sign * d_deccel);
-         plan.put(t_accel + t_coast + t_deccel, d_dest);
+         plan.add(new PlanPart(0.0,               t_accel,                      d_curr,                   sign * a_max,  sign * v_i));
+         plan.add(new PlanPart(t_accel,           t_accel + t_coast,            d_curr + sign * d_accel,  0,             sign * v_max));
+         plan.add(new PlanPart(t_accel + t_coast, t_accel + t_coast + t_deccel, d_dest - sign * d_deccel, sign * -a_max, sign * v_max));
+         
+         // plan.put(0.0,                          d_curr);
+         // plan.put(t_accel,                      d_curr + sign * d_accel);
+         // plan.put(t_accel + t_coast,            d_dest - sign * d_deccel);
+         // plan.put(t_accel + t_coast + t_deccel, d_dest);
          
          System.out.println("Trapazoidal Profile (T, D)");
          System.out.println(0.0 + " : " + d_curr);
@@ -48,9 +80,12 @@ public class ElevatorMotionPlan {
          double t_accel = (v_max - v_i) / a_max;
          double t_deccel = v_max / a_max;
          
-         plan.put(0.0,                d_curr);
-         plan.put(t_accel,            d_curr + sign * d_accel);
-         plan.put(t_accel + t_deccel, d_dest);
+         plan.add(new PlanPart(0.0,       t_accel,            d_curr,                  sign * a_max,  sign * v_i));
+         plan.add(new PlanPart(t_accel,   t_accel + t_deccel, d_curr + sign * d_accel, sign * -a_max, sign * v_max));
+         
+         // plan.put(0.0,                d_curr);
+         // plan.put(t_accel,            d_curr + sign * d_accel);
+         // plan.put(t_accel + t_deccel, d_dest);
 
          System.out.println("Triangular Profile (T, D)");
          System.out.println(0.0 + " : " + d_curr);
@@ -64,8 +99,19 @@ public class ElevatorMotionPlan {
 
    public double getSetpoint() {
       double t = Timer.getFPGATimestamp() - start_time;
-      t = NorthUtils.clamp(plan.firstKey(), plan.lastKey(), t);
 
-      return plan.getInterpolated(t);
+      t = NorthUtils.clamp(plan.get(0).start_time, plan.get(plan.size() - 1).end_time, t);
+      PlanPart part = null;
+      for(PlanPart p : plan) {
+         if((p.start_time <= t) && (t <= p.end_time)) {
+            part = p;
+            break;
+         }
+      }
+      assert(part != null);
+      return part.getSetpoint(t);
+
+      // t = NorthUtils.clamp(plan.firstKey(), plan.lastKey(), t);
+      // return plan.getInterpolated(t);
    }
 }

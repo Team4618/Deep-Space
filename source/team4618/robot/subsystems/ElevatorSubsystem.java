@@ -50,9 +50,32 @@ public class ElevatorSubsystem {
 
    ElevatorMotionPlan curr_plan;
    double setpoint = 0;
+
+   //TODO: make these parameters when we get that working
+   double min_stall_voltage = -1.5;
+   double max_stall_voltage = 0.5;
+
+   //NOTE: positive is down, voltage in volts
+   public void setMotorVoltage(double voltage) {
+      //TODO: binding compensation
+      if((0 < voltage) && (voltage < max_stall_voltage)) {
+         voltage = max_stall_voltage;
+      } else if((0 > voltage) && (voltage > min_stall_voltage)) {
+         voltage = min_stall_voltage;
+      }
+
+      elev_talon.set(NorthUtils.getPercent(voltage));
+   }
    
    public boolean auto_home() {
-      elev_talon.set(NorthUtils.getPercent(2.5 /*volts, positive is down*/));
+      System.out.println("Homing");
+
+      if(Math.abs(getSpeed()) < 0.1) {
+         //NOTE: overcome the binding if not moving
+         setMotorVoltage(2.5);
+      } else {
+         setMotorVoltage(1);
+      }
          
       if(!bottom_switch.get()) {
          System.out.println("Elev Homed");
@@ -64,33 +87,36 @@ public class ElevatorSubsystem {
    }
 
    public boolean auto_calibrate() {
+      System.out.println("Calibrating");
       //TODO
 
       return true;
    }
 
    NorthSequence calibration_sequence = NorthSequence.Begin()
-                                          .Do(this::auto_home)
+                                          .Wait(this::auto_home)
                                           .Do(this::auto_calibrate)
-                                          .Do(() -> calibrated = true)
-                                          .End();
+                                          .Do(() -> {
+                                             calibrated = true;          
+                                             System.out.println("Calibration Done");
+                                          }).End();
 
    public void periodic() {
       if(!manual) {
          if(calibrated) {
-            if((curr_plan == null) || ((curr_plan.setpoint - setpoint) > 0.001)) {
+            if((curr_plan == null) || (Math.abs(curr_plan.setpoint - setpoint) > 0.001)) {
                curr_plan = new ElevatorMotionPlan(getHeight(), getSpeed(), setpoint, 
-                                                  1 /*max_vel.get()*/, 1 /*max_accel.get()*/);
+                                                  1 /*max_vel.get()*/, 3 /*max_accel.get()*/);
             }
       
             double error = curr_plan.getSetpoint() /*setpoint*/ - getHeight();
             double voltage = /*hold_voltage.get()*/1.5 + /*p_gain.get()*/ 6 * error;
-            elev_talon.set(NorthUtils.getPercent(-voltage));
+            setMotorVoltage(-voltage);
 
-            // System.out.println("Curr Setpoint: " + curr_plan.getSetpoint() + " V: " + voltage + " Error: " + error);
-            North.sendDiagnostic(NAME, "Setpoint", Feet, curr_plan.getSetpoint());
+            System.out.println("Curr Setpoint: " + curr_plan.getSetpoint() + " V: " + voltage + " Error: " + error);
+            // North.sendDiagnostic(NAME, "Setpoint", Feet, curr_plan.getSetpoint());
          } else if(!calibration_sequence.isExecuting()) {
-            System.out.println("Calibrating");
+            System.out.println("Starting Calibration");
             North.execute(calibration_sequence);
          }
       }
@@ -115,7 +141,7 @@ public class ElevatorSubsystem {
             result = i;
          }
       }
-      
+
       return result;
    }
 

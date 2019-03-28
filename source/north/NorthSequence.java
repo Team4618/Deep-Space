@@ -28,6 +28,11 @@ public class NorthSequence implements IExecutable {
          sequence.add((t) -> cond.get());
          return this;
       }
+
+      public Builder Wait(double time) {
+         sequence.add((t) -> t > time);
+         return this;
+      }
    
       public NorthSequence End() {
          return new NorthSequence(sequence);

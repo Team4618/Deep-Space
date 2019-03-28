@@ -60,6 +60,15 @@ public class NetworkDefinitions {
    //SetConnectionFlags_Flags
    static final byte ConnectionFlag_WANTS_STATE = (1 << 0);
 
+   public static ByteBuffer PackPacket(ByteBuffer data, byte type) {
+      ByteBuffer result = ByteBuffer.allocate(16384);
+      result.putInt(data.position());
+      result.put(type);
+      result.put(data);
+
+      return result;
+   }
+
    public static ByteBuffer createWelcomePacket() {
       ByteBuffer data = ByteBuffer.allocate(16384); //TODO: this is rlly big
       
@@ -81,8 +90,7 @@ public class NetworkDefinitions {
 
       //TODO: trim result so we're not sending the full 16K
 
-      //new Packet(data, Welcome) //this can add the packet header to the begining 
-      return data;
+      return PackPacket(data, Welcome);
    }
 
    public static void writeCurrentParameters_Group(ByteBuffer data, String name, NorthGroup group) {

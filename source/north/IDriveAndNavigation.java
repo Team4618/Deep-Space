@@ -1,7 +1,5 @@
 package north;
 
-import north.curves.*;
-
 public interface IDriveAndNavigation {
    void setState(RobotState state);
    RobotState getState(double dt);

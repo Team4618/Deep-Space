@@ -42,3 +42,8 @@ jar {
 wrapper {
    gradleVersion = '5.0'
 }
+
+task run_NorthTestMain(type: JavaExec) {
+   main = "northtest.NorthTestMain"
+   classpath = sourceSets.main.runtimeClasspath
+}
