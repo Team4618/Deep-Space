@@ -1,9 +1,14 @@
 package north.network;
 
+import north.Diagnostics;
 import north.North;
 import north.North.NorthGroup;
+import north.parameters.Parameter;
+import north.parameters.ParameterArray;
+import north.util.NorthUtils;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Set;
@@ -49,28 +54,34 @@ public class NetworkDefinitions {
 
    //----north_network_definitions.h------------------------
    //PacketType
-   static final byte SetConnectionFlags = 1; //<-
-   static final byte Welcome = 2;            //->
-   static final byte CurrentParameters = 3;  //->
-   static final byte State = 4;              //->
-   static final byte ParameterOp = 5;        //<-
-   static final byte SetState = 6;           //<-
-   static final byte UploadAutonomous = 7;   //<-
+   static final byte Heartbeat = 0;          // <->
+   static final byte SetConnectionFlags = 1; // <-
+   static final byte Welcome = 2;            //  ->
+   static final byte CurrentParameters = 3;  //  ->
+   static final byte State = 4;              //  ->
+   static final byte ParameterOp = 5;        // <-
+   static final byte SetState = 6;           // <-
+   static final byte UploadAutonomous = 7;   // <-
 
    //SetConnectionFlags_Flags
    static final byte ConnectionFlag_WANTS_STATE = (1 << 0);
 
    public static ByteBuffer PackPacket(ByteBuffer data, byte type) {
-      ByteBuffer result = ByteBuffer.allocate(16384);
-      result.putInt(data.position());
-      result.put(type);
-      result.put(data);
-
+      int size = data.position();
+      ByteBuffer result = ByteBuffer.allocate(size + 4 + 1);
+      result.order(ByteOrder.LITTLE_ENDIAN);
+      
+      //PacketHeader
+      result.putInt(size); //Size
+      result.put(type); //Type
+      
+      result.put(data.array(), 0, size);
       return result;
    }
 
    public static ByteBuffer createWelcomePacket() {
       ByteBuffer data = ByteBuffer.allocate(16384); //TODO: this is rlly big
+      data.order(ByteOrder.LITTLE_ENDIAN);
       
       //Welcome_PacketHeader
       data.put((byte) North.name.length()); //u8 robot_name_length;
@@ -88,20 +99,44 @@ public class NetworkDefinitions {
       //TODO: commands
       //Welcome_Command [command_count]
 
-      //TODO: trim result so we're not sending the full 16K
-
       return PackPacket(data, Welcome);
    }
-
+   
    public static void writeCurrentParameters_Group(ByteBuffer data, String name, NorthGroup group) {
       data.put((byte) name.length()); //u8 name_length;
       data.put((byte) (group.parameter_arrays.size() + group.parameters.size())); //u8 param_count;
       
-      //TODO: write parameters
+      data.put(name.getBytes()); //char name[name_length]
+
+      //CurrentParameters_Parameter [param_count]
+      for(Map.Entry<String, Parameter> param : group.parameters.entrySet()) {
+         //CurrentParameters_Parameter
+         data.put((byte) 0); //u8 is_array;
+         data.put((byte) param.getKey().length()); //u8 name_length;
+         data.put((byte) 0); //u8 value_count; //Ignored if is_array is false
+         data.put(param.getKey().getBytes()); //char name[name_length]
+         data.putFloat((float) param.getValue().get()); // f32 [value_count]
+      }
+
+      for(Map.Entry<String, ParameterArray> param : group.parameter_arrays.entrySet()) {
+         //CurrentParameters_Parameter
+         data.put((byte) 1); //u8 is_array;
+         data.put((byte) param.getKey().length()); //u8 name_length;
+         data.put((byte) param.getValue().values.length); //u8 value_count; //Ignored if is_array is false
+         data.put(param.getKey().getBytes()); //char name[name_length]
+         
+         // f32 [value_count]
+         for(Double _val : param.getValue().values) {
+            double val = (double) _val;
+            data.putFloat((float) val); 
+         }
+      }
    }
 
    public static ByteBuffer createCurrentParametersPacket() {
       ByteBuffer data = ByteBuffer.allocate(16384);
+      data.order(ByteOrder.LITTLE_ENDIAN);
+
       Set<Map.Entry<String, NorthGroup>> groups = North.groups.entrySet();
 
       //CurrentParameters_PacketHeader
@@ -112,13 +147,78 @@ public class NetworkDefinitions {
          writeCurrentParameters_Group(data, group.getKey(), group.getValue());   
       }
 
-      return data;
+      return PackPacket(data, CurrentParameters);
+   }
+
+   public static void writeState_Group(ByteBuffer data, String name, NorthGroup group) {
+      data.put((byte) name.length()); //u8 name_length;
+      data.put((byte) group.pending_diagnostics.size()); // u8 diagnostic_count;
+      data.put((byte) group.pending_messages.size()); // u8 message_count;
+      data.put((byte) group.pending_markers.size()); // u8 marker_count;
+      data.put((byte) group.pending_paths.size()); // u8 path_count;
+      
+      data.put(name.getBytes()); //char name[name_length]
+
+      //State_Diagnostic [diagnostic_count]
+      for(Map.Entry<String, Diagnostics.StateDiagnostic> entry : group.pending_diagnostics.entrySet()) {
+         // State_Diagnostic
+         data.put((byte) entry.getKey().length()); //u8 name_length;
+         data.putFloat((float) entry.getValue().value); //f32 value;
+         data.put(entry.getValue().unit); //u8 unit; //NOTE: North_Unit
+         data.put(entry.getKey().getBytes()); //char name[name_length]
+      }
+
+      //State_Message [message_count]
+      for(Diagnostics.StateMessage entry : group.pending_messages) {
+         // State_Message
+         data.put(entry.type); //u8 type; //NOTE: North_MessageType
+         data.putShort((short) entry.text.length()); //u16 length;
+
+         data.put(entry.text.getBytes()); //char message[length]
+      }
+
+      //State_Marker [marker_count]
+      for(Diagnostics.StateMarker entry : group.pending_markers) {
+         // State_Marker
+         data.putFloat((float) entry.pos.x); //v2 pos;
+         data.putFloat((float) entry.pos.y);
+         data.putShort((short) entry.text.length()); //u16 length;
+         data.put(entry.text.getBytes()); //char message[length]
+      }
+
+      //State_Path [path_count]
+      //TODO: finsh this
+      for(Diagnostics.StatePath entry : group.pending_paths) {
+         // State_Path
+         data.putShort((short) entry.text.length()); //u16 length;
+         data.put((byte) entry.path.length); //u8 control_point_count;
+         data.put(entry.text.getBytes()); //char message[length]
+         
+         //North_HermiteControlPoint [control_point_count]
+         
+      }
    }
 
    public static ByteBuffer createStatePacket() {
-      ByteBuffer result = ByteBuffer.allocate(0);
-      result.put(State);
+      ByteBuffer data = ByteBuffer.allocate(16384);
+      data.order(ByteOrder.LITTLE_ENDIAN);
 
-      return result;
+      //State_PacketHeader
+      data.putFloat((float) North.state.posx); //v2 pos;
+      data.putFloat((float) North.state.posy);
+      data.putFloat((float) North.state.angle); //f32 angle;
+      data.put(GameMode_Disabled); //u8 mode; //NOTE: North_GameMode
+
+      Set<Map.Entry<String, NorthGroup>> groups = North.groups.entrySet();
+      
+      data.put((byte) groups.size()); //u8 group_count;
+      data.putFloat((float) NorthUtils.getTimestamp()); //f32 time;
+
+      writeState_Group(data, "", North.default_group); //State_Group default_group;
+      for(Map.Entry<String, NorthGroup> group : groups) { //State_Group [group_count]
+         writeState_Group(data, group.getKey(), group.getValue());   
+      }
+
+      return PackPacket(data, State);
    }
 }

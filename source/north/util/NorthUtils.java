@@ -100,12 +100,12 @@ public class NorthUtils {
       }
    }
 
+   static long currentTimeMillis_start_time = System.currentTimeMillis();
    public static double getTimestamp() {
       if(North.IS_REAL) {
          return Timer.getFPGATimestamp();
       } else {
-         return System.currentTimeMillis() / 1000.0;
+         return (System.currentTimeMillis() - currentTimeMillis_start_time) / 1000.0;
       }
-      
    }
 }

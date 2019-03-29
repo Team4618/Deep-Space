@@ -19,6 +19,8 @@ public class ParameterArray {
          values = new double[]{ 0 };
          writeParamArrayFile(file_name, values);
       }
+
+      North.sendCurrentParameters();
    }
    
    public void set(int i, double val) {

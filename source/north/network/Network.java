@@ -5,14 +5,17 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Set;
 
+import north.North;
 import north.util.NorthUtils;
 
 import static north.network.NetworkDefinitions.*;
@@ -40,10 +43,15 @@ public class Network {
       }
 
       public void send(ByteBuffer data) {
-         System.out.println(data.toString());
+         // System.out.println(data);
+         // System.out.println(Arrays.toString(data.array()));
+         data.flip();
+
          try {
             channel.write(data);
-         } catch (IOException e) { e.printStackTrace(); }
+         } catch (IOException e) {
+            // e.printStackTrace();
+         }
       }
    }
 
@@ -59,16 +67,14 @@ public class Network {
       } catch(Exception e) { e.printStackTrace(); }
    }
 
-   public static void send(ByteBuffer data) {
-      for(ConnectedClient client : connections) {
-         client.send(data);
-      }
-   }
-
    public static void HandlePacket(ConnectedClient client, ByteBuffer data, byte type) {
       client.last_recv_time = NorthUtils.getTimestamp();
       
       switch(type) {
+         case Heartbeat: {
+            // System.out.println("Heartbeat");
+         } break;
+
          case SetConnectionFlags: {
             
          } break;
@@ -78,7 +84,7 @@ public class Network {
          } break;
 
          case SetState: {
-               //TODO: set state
+            //TODO: set state
          } break;
 
          case UploadAutonomous: {
@@ -90,7 +96,6 @@ public class Network {
       }
    }
 
-   public static ByteBuffer buffer = ByteBuffer.allocate(16384);
    public static void tick() {
       try {
             //Check for incoming connections
@@ -113,8 +118,9 @@ public class Network {
                      
                      ConnectedClient client = new ConnectedClient(channel);
                      connections.add(client);
+
                      client.send(NetworkDefinitions.createWelcomePacket());
-                     //TODO: send welcome & currentparams
+                     client.send(NetworkDefinitions.createCurrentParametersPacket());
                   }
                }
             }
@@ -124,15 +130,35 @@ public class Network {
             while(clients.hasNext()) {
                ConnectedClient client = clients.next();
                
-               //TODO: check if there are any complete packets recieved from this client
                client.selector.selectNow();
-               for(SelectionKey key : client.selector.selectedKeys()) {
+               Set<SelectionKey> readyKeys = client.selector.selectedKeys();
+               Iterator<SelectionKey> iterator = readyKeys.iterator();
+               while (iterator.hasNext()) {
+                  SelectionKey key = iterator.next();
+                  iterator.remove();
+   
                   if(key.isReadable()) {
-                     // client.channel.read();
-                     // HandlePacket(sender, buffer);
+                     ByteBuffer header = ByteBuffer.allocate(4 + 1);
+                     header.order(ByteOrder.LITTLE_ENDIAN);
+
+                     int amount_read = -1;
+                     try {
+                        amount_read = client.channel.read(header);
+                     } catch(Exception e) { /*Connection ended*/ }
+                      
+                     if(amount_read >= 5) {
+                        header.flip();
+                        int size = header.getInt();
+                        byte type = header.get();
+   
+                        ByteBuffer data = ByteBuffer.allocate(size);
+                        client.channel.read(data);
+                        HandlePacket(client, data, type);
+                     }
                   }
                }
 
+               // System.out.println(client.channel.getLocalAddress().toString() + ": " + (NorthUtils.getTimestamp() - client.last_recv_time));
                if((NorthUtils.getTimestamp() - client.last_recv_time) > TIMEOUT) {
                   System.out.println(client.channel.getLocalAddress().toString() + " has disconnected");
                   clients.remove();
@@ -140,8 +166,11 @@ public class Network {
             }
 
             //send state
-            // ByteBuffer statePacket = createStatePacket();
-            // send(statePacket);
+            ByteBuffer statePacket = NetworkDefinitions.createStatePacket();
+            for(ConnectedClient client : connections) {
+               client.send(statePacket);
+            }
+            North.clearPendingState();
       } catch (Exception e) { e.printStackTrace(); }
    }
 }

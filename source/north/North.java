@@ -2,6 +2,7 @@ package north;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -9,6 +10,8 @@ import north.autonomous.IExecutable;
 // import north.autonomous.Node;
 import north.drivecontroller.IDriveController;
 import north.network.Network;
+import north.network.NetworkDefinitions;
+import north.network.Network.ConnectedClient;
 import north.parameters.Parameter;
 import north.parameters.ParameterArray;
 import north.util.Button;
@@ -116,6 +119,13 @@ public class North {
 
       public HashMap<String, Parameter> parameters = new HashMap<>();
       public HashMap<String, ParameterArray> parameter_arrays = new HashMap<>();
+
+      public void clearPendingState() {
+         pending_diagnostics.clear();
+         pending_messages.clear();
+         pending_markers.clear();
+         pending_paths.clear();
+      }
    }
 
    public static NorthGroup default_group = new NorthGroup();
@@ -133,6 +143,8 @@ public class North {
       }  
    }
    
+   //TODO: prevent the same message getting added twice to pending
+
    //NOTE: diagnostics stuff
    public static void sendMessage(String group, byte type, String text) {
       getOrCreateGroup(group).pending_messages.add(new Diagnostics.StateMessage(text, type));
@@ -142,15 +154,26 @@ public class North {
       getOrCreateGroup(group).pending_markers.add(new Diagnostics.StateMarker(text, pos));
    }
 
-   public static void sendPath(String group, String text, Vector2... points) {
-      getOrCreateGroup(group).pending_paths.add(new Diagnostics.StatePath(text, points));
+   //TODO: this needs to take control points, not v2's
+   public static void sendPath(String group, String text/*, Vector2... points*/) {
+      // getOrCreateGroup(group).pending_paths.add(new Diagnostics.StatePath(text, points));
    } 
 
    public static void sendDiagnostic(String group, String name, byte unit, double value) {
       getOrCreateGroup(group).pending_diagnostics.put(name, new Diagnostics.StateDiagnostic(unit, value));
    }
 
+   public static void clearPendingState() {
+      default_group.clearPendingState();
+      groups.values().forEach(NorthGroup::clearPendingState);
+   }
+
+   //NOTE: this gets called every time a parameter gets changed or created
    public static void sendCurrentParameters() {
-      //TODO
+      ByteBuffer curr_params_packet = NetworkDefinitions.createCurrentParametersPacket();
+      
+      for(ConnectedClient client : Network.connections) {
+         client.send(curr_params_packet);
+      }
    }
 }
